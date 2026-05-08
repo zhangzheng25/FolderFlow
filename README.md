@@ -1,3 +1,5 @@
+本项目由 OpenAI Codex 应用协助开发，使用 GPT-5 系列模型完成代码实现、调试与整理。
+
 # FolderFlow
 
 FolderFlow is a lightweight Windows desktop utility for tracking and quickly opening frequently used folders.
