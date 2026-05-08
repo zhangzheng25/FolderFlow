@@ -26,6 +26,28 @@ QString qs(const wchar_t *text)
 {
     return QString::fromWCharArray(text);
 }
+
+QWidget *createScriptPathRow(QWidget *parent,
+                             QLineEdit **lineEdit,
+                             QPushButton **browseButton,
+                             QPushButton **clearButton,
+                             const QString& placeholder)
+{
+    auto *widget = new QWidget(parent);
+    auto *layout = new QHBoxLayout(widget);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(6);
+
+    *lineEdit = new QLineEdit(parent);
+    (*lineEdit)->setPlaceholderText(placeholder);
+    *browseButton = new QPushButton(qs(L"\u6d4f\u89c8"), parent);
+    *clearButton = new QPushButton(qs(L"\u6e05\u7a7a"), parent);
+
+    layout->addWidget(*lineEdit, 1);
+    layout->addWidget(*browseButton);
+    layout->addWidget(*clearButton);
+    return widget;
+}
 }
 
 MainWindow::MainWindow(QWidget *parent)
@@ -62,6 +84,7 @@ void MainWindow::setupUi()
 {
     setWindowTitle(APP_NAME);
     setWindowIcon(QIcon(":/favicon.ico"));
+    setWindowOpacity(0.99);
 
     const QRect availableGeometry = QApplication::primaryScreen()
             ? QApplication::primaryScreen()->availableGeometry()
@@ -235,20 +258,30 @@ void MainWindow::setupUi()
     m_lineIgnoreKeywords->setPlaceholderText(qs(L"\u4f8b\u5982: build; debug; release"));
 
     auto *commandEnvWidget = new QWidget(settingsBox);
-    auto *commandEnvLayout = new QHBoxLayout;
-    commandEnvWidget->setLayout(commandEnvLayout);
+    auto *commandEnvLayout = new QVBoxLayout(commandEnvWidget);
     commandEnvLayout->setContentsMargins(0, 0, 0, 0);
     commandEnvLayout->setSpacing(6);
-    m_lineCommandEnvScript = new QLineEdit(settingsBox);
-    m_lineCommandEnvScript->setObjectName("line_command_env_script");
-    m_lineCommandEnvScript->setPlaceholderText(qs(L"\u9009\u62e9 .bat/.cmd\uff0c\u4f8b\u5982 qtenv2.bat \u6216 VsDevCmd.bat"));
-    m_btnBrowseCommandEnvScript = new QPushButton(qs(L"\u6d4f\u89c8"), settingsBox);
-    m_btnBrowseCommandEnvScript->setObjectName("btn_browse_command_env_script");
-    m_btnClearCommandEnvScript = new QPushButton(qs(L"\u6e05\u7a7a"), settingsBox);
-    m_btnClearCommandEnvScript->setObjectName("btn_clear_command_env_script");
-    commandEnvLayout->addWidget(m_lineCommandEnvScript, 1);
-    commandEnvLayout->addWidget(m_btnBrowseCommandEnvScript);
-    commandEnvLayout->addWidget(m_btnClearCommandEnvScript);
+    auto *qtEnvWidget = createScriptPathRow(settingsBox,
+                                            &m_lineQtEnvScript,
+                                            &m_btnBrowseQtEnvScript,
+                                            &m_btnClearQtEnvScript,
+                                            qs(L"Qt: qtenv2.bat"));
+    auto *vsEnvWidget = createScriptPathRow(settingsBox,
+                                            &m_lineVsEnvScript,
+                                            &m_btnBrowseVsEnvScript,
+                                            &m_btnClearVsEnvScript,
+                                            qs(L"VS: VsDevCmd.bat"));
+    auto *customEnvWidget = createScriptPathRow(settingsBox,
+                                                &m_lineCustomEnvScript,
+                                                &m_btnBrowseCustomEnvScript,
+                                                &m_btnClearCustomEnvScript,
+                                                qs(L"\u81ea\u5b9a\u4e49: *.bat / *.cmd"));
+    m_lineQtEnvScript->setObjectName("line_qt_env_script");
+    m_lineVsEnvScript->setObjectName("line_vs_env_script");
+    m_lineCustomEnvScript->setObjectName("line_custom_env_script");
+    commandEnvLayout->addWidget(qtEnvWidget);
+    commandEnvLayout->addWidget(vsEnvWidget);
+    commandEnvLayout->addWidget(customEnvWidget);
 
     m_checkStartup = new QCheckBox(qs(L"\u5f00\u673a\u542f\u52a8"), settingsBox);
     m_checkStartup->setObjectName("check_startup");
@@ -357,28 +390,33 @@ void MainWindow::initConnect()
         updateList();
     });
 
-    connect(m_lineCommandEnvScript, &QLineEdit::editingFinished, this, [this]() {
-        saveSettings();
-    });
+    const auto connectScriptRow = [this](QLineEdit *lineEdit, QPushButton *browseButton, QPushButton *clearButton) {
+        connect(lineEdit, &QLineEdit::editingFinished, this, [this]() {
+            saveSettings();
+        });
 
-    connect(m_btnBrowseCommandEnvScript, &QPushButton::clicked, this, [this]() {
-        const QString selectedPath = QFileDialog::getOpenFileName(
-                this,
-                qs(L"\u9009\u62e9\u547d\u4ee4\u884c\u73af\u5883\u811a\u672c"),
-                m_lineCommandEnvScript->text().trimmed(),
-                qs(L"\u547d\u4ee4\u811a\u672c (*.bat *.cmd);;\u6240\u6709\u6587\u4ef6 (*.*)"));
-        if (selectedPath.isEmpty()) {
-            return;
-        }
+        connect(browseButton, &QPushButton::clicked, this, [this, lineEdit]() {
+            const QString selectedPath = QFileDialog::getOpenFileName(
+                    this,
+                    qs(L"\u9009\u62e9\u547d\u4ee4\u884c\u73af\u5883\u811a\u672c"),
+                    lineEdit->text().trimmed(),
+                    qs(L"\u547d\u4ee4\u811a\u672c (*.bat *.cmd);;\u6240\u6709\u6587\u4ef6 (*.*)"));
+            if (selectedPath.isEmpty()) {
+                return;
+            }
 
-        m_lineCommandEnvScript->setText(QDir::toNativeSeparators(selectedPath));
-        saveSettings();
-    });
+            lineEdit->setText(QDir::toNativeSeparators(selectedPath));
+            saveSettings();
+        });
 
-    connect(m_btnClearCommandEnvScript, &QPushButton::clicked, this, [this]() {
-        m_lineCommandEnvScript->clear();
-        saveSettings();
-    });
+        connect(clearButton, &QPushButton::clicked, this, [this, lineEdit]() {
+            lineEdit->clear();
+            saveSettings();
+        });
+    };
+    connectScriptRow(m_lineQtEnvScript, m_btnBrowseQtEnvScript, m_btnClearQtEnvScript);
+    connectScriptRow(m_lineVsEnvScript, m_btnBrowseVsEnvScript, m_btnClearVsEnvScript);
+    connectScriptRow(m_lineCustomEnvScript, m_btnBrowseCustomEnvScript, m_btnClearCustomEnvScript);
 
     connect(m_checkStartup, &QCheckBox::toggled, this, [this](bool enabled) {
         applyStartupSetting(enabled);
@@ -407,7 +445,10 @@ void MainWindow::loadSettings()
     m_spinQueryTime->setValue(settings.value("query/days", 7).toInt());
     m_spinKeepDays->setValue(settings.value("history/keepDays", 7).toInt());
     m_lineIgnoreKeywords->setText(settings.value("history/ignoredFolderNames", "").toString());
-    m_lineCommandEnvScript->setText(settings.value("commandLine/envScriptPath", "").toString());
+    m_lineQtEnvScript->setText(settings.value("commandLine/qtEnvScriptPath", "").toString());
+    m_lineVsEnvScript->setText(settings.value("commandLine/vsEnvScriptPath", "").toString());
+    m_lineCustomEnvScript->setText(settings.value("commandLine/customEnvScriptPath",
+                                                  settings.value("commandLine/envScriptPath", "")).toString());
     m_checkStartup->setChecked(settings.value("startup/enabled", isStartupEnabled()).toBool());
     setCompactMode(settings.value("window/compactMode", false).toBool());
 }
@@ -420,7 +461,9 @@ void MainWindow::saveSettings() const
     settings.setValue("query/days", m_spinQueryTime->value());
     settings.setValue("history/keepDays", m_spinKeepDays->value());
     settings.setValue("history/ignoredFolderNames", m_lineIgnoreKeywords->text().trimmed());
-    settings.setValue("commandLine/envScriptPath", m_lineCommandEnvScript->text().trimmed());
+    settings.setValue("commandLine/qtEnvScriptPath", m_lineQtEnvScript->text().trimmed());
+    settings.setValue("commandLine/vsEnvScriptPath", m_lineVsEnvScript->text().trimmed());
+    settings.setValue("commandLine/customEnvScriptPath", m_lineCustomEnvScript->text().trimmed());
     settings.setValue("startup/enabled", m_checkStartup->isChecked());
     settings.setValue("window/compactMode", m_compactMode);
 }
@@ -542,9 +585,9 @@ void MainWindow::updateList()
     const QString keyword = currentSearchKeyword();
     auto list = m_dbManager.getHotRanking(countWeight, timeWeight, queryTime, queryCount, keyword);
 
-    m_listRanking->updateData(list);
-    m_listTimeline->updateData(m_dbManager.getTimeline(queryCount, keyword));
-    m_listFavorite->updateData(m_dbManager.getFavorites(keyword));
+    m_listRanking->updateData(list, keyword);
+    m_listTimeline->updateData(m_dbManager.getTimeline(queryCount, keyword), keyword);
+    m_listFavorite->updateData(m_dbManager.getFavorites(keyword), keyword);
 
     m_labelCount->setText(qs(L"\u8ba1\u6570:%1%").arg(countWeight));
     m_labelLatest->setText(qs(L"\u65b0\u9c9c\u5ea6:%1%").arg(100 - countWeight));

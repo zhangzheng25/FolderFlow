@@ -27,14 +27,14 @@ public:
 
     void setMode(ViewMode mode) { m_mode = mode; }
 
-    void updateData(const QList<FFolderItem>& dataList) {
+    void updateData(const QList<FFolderItem>& dataList, const QString& keyword = QString()) {
         this->setUpdatesEnabled(false);
         this->clear(); // 清空旧项
         m_dataList = dataList;
 
         for (int i = 0; i < dataList.size(); ++i) {
             auto *listItem = new QListWidgetItem(this);
-            auto *card = new FolderCardWidget(dataList[i], (int)m_mode, i, this);
+            auto *card = new FolderCardWidget(dataList[i], (int)m_mode, i, keyword, this);
 
             // 关键：设置 Item 的大小提示，否则 Widget 可能显示不出来
             listItem->setSizeHint(card->sizeHint());

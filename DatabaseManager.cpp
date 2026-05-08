@@ -171,6 +171,17 @@ void DatabaseManager::setPinned(const QString& path, bool pinned)
     }
 }
 
+void DatabaseManager::removePath(const QString& path)
+{
+    QSqlQuery query;
+    query.prepare("DELETE FROM folder_data WHERE path = ?");
+    query.addBindValue(path);
+
+    if (!query.exec()) {
+        qDebug() << "removePath Error:" << query.lastError().text();
+    }
+}
+
 QList<FFolderItem> DatabaseManager::getTimeline(int limit, const QString& keyword) const
 {
     QSqlQuery query;

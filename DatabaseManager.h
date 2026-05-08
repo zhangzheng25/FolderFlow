@@ -28,6 +28,7 @@ public:
     static void logAccess(const QString& path);
     static void setFavorite(const QString& path, bool fav, const QString& alias = "");
     static void setPinned(const QString& path, bool pinned);
+    static void removePath(const QString& path);
 
     QList<FFolderItem> getTimeline(int limit = 50, const QString& keyword = QString()) const;
     QList<FFolderItem> getHotRanking(double weightA,
