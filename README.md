@@ -26,6 +26,12 @@ If you often switch between project folders, build folders, download folders, or
 - 收藏目录并设置别名。
 - Search by path or alias.
 - 按路径或别名搜索。
+- Compact mode and full mode switch from the main window.
+- 可在主界面切换精简模式和全量模式；精简模式只保留搜索栏和时间线，更适合作为快捷工具。
+- Open folders in Command Prompt with an optional environment script, such as Qt `qtenv2.bat` or Visual Studio `VsDevCmd.bat`.
+- 支持配置命令行环境脚本，在右键菜单中以 Qt 或 Visual Studio 临时环境打开目录。
+- Drive root paths are ignored automatically.
+- 自动排除盘符根目录，不入库也不展示。
 - Tray mode and global shortcut.
 - 托盘运行和全局快捷键。
 

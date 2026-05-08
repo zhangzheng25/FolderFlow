@@ -19,6 +19,7 @@
 #include <QStringList>
 
 class FolderListWidget;
+class QWidget;
 
 class MainWindow : public QMainWindow
 {
@@ -46,6 +47,8 @@ private:
     QStringList ignoredKeywords() const;
     void applyIgnoredKeywords() const;
     void setupShortcuts();
+    void setCompactMode(bool compact);
+    void applyViewMode();
     void updateList();
 
 private:
@@ -55,7 +58,9 @@ private:
     QLineEdit *m_lineSearch = nullptr;
     QPushButton *m_btnSearch = nullptr;
     QPushButton *m_btnClearSearch = nullptr;
+    QPushButton *m_btnViewMode = nullptr;
     QTabWidget *m_tabWidget = nullptr;
+    QWidget *m_quickAccessWidget = nullptr;
     FolderListWidget *m_listTimeline = nullptr;
     FolderListWidget *m_listRanking = nullptr;
     FolderListWidget *m_listFavorite = nullptr;
@@ -72,6 +77,7 @@ private:
     QPushButton *m_btnClearCommandEnvScript = nullptr;
     QCheckBox *m_checkStartup = nullptr;
     QPushButton *m_btnClearHistory = nullptr;
+    bool m_compactMode = false;
 
     QSystemTrayIcon *trayIcon = nullptr;
     QMenu *trayMenu = nullptr;

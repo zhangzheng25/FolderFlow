@@ -16,6 +16,7 @@
 #include <QSizePolicy>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QTabBar>
 #include <QVBoxLayout>
 
 namespace {
@@ -50,7 +51,9 @@ void MainWindow::showAndFocusSearch()
     showNormal();
     raise();
     activateWindow();
-    m_tabWidget->setCurrentIndex(0);
+    if (!m_compactMode) {
+        m_tabWidget->setCurrentIndex(0);
+    }
     m_lineSearch->setFocus(Qt::ShortcutFocusReason);
     m_lineSearch->selectAll();
 }
@@ -88,9 +91,14 @@ void MainWindow::setupUi()
     m_btnClearSearch->setObjectName("btn_clear_search");
     m_btnClearSearch->setMinimumSize(72, 34);
 
+    m_btnViewMode = new QPushButton(qs(L"\u7cbe\u7b80\u6a21\u5f0f"), this);
+    m_btnViewMode->setObjectName("btn_view_mode");
+    m_btnViewMode->setMinimumSize(88, 34);
+
     searchLayout->addWidget(m_lineSearch, 1);
     searchLayout->addWidget(m_btnSearch);
     searchLayout->addWidget(m_btnClearSearch);
+    searchLayout->addWidget(m_btnViewMode);
     mainLayout->addLayout(searchLayout);
 
     m_tabWidget = new QTabWidget(this);
@@ -101,7 +109,9 @@ void MainWindow::setupUi()
     recentLayout->setContentsMargins(0, 8, 0, 0);
     recentLayout->setSpacing(8);
 
-    auto *quickAccessLayout = new QHBoxLayout;
+    m_quickAccessWidget = new QWidget(recentTab);
+    auto *quickAccessLayout = new QHBoxLayout(m_quickAccessWidget);
+    quickAccessLayout->setContentsMargins(0, 0, 0, 0);
     quickAccessLayout->setSpacing(8);
 
     auto *rankingBox = new QGroupBox(qs(L"\u6700\u8fd1\u7ecf\u5e38\u6253\u5f00"), recentTab);
@@ -131,7 +141,7 @@ void MainWindow::setupUi()
     m_listTimeline->setObjectName("list_timeline");
     timelineLayout->addWidget(m_listTimeline);
 
-    recentLayout->addLayout(quickAccessLayout, 1);
+    recentLayout->addWidget(m_quickAccessWidget, 1);
     recentLayout->addWidget(timelineBox, 1);
     m_tabWidget->addTab(recentTab, qs(L"\u6700\u8fd1"));
 
@@ -320,6 +330,11 @@ void MainWindow::initConnect()
         updateList();
     });
 
+    connect(m_btnViewMode, &QPushButton::clicked, this, [this]() {
+        setCompactMode(!m_compactMode);
+        saveSettings();
+    });
+
     connect(m_spinQueryCount, QOverload<int>::of(&QSpinBox::valueChanged), this, [this]() {
         saveSettings();
         updateList();
@@ -394,6 +409,7 @@ void MainWindow::loadSettings()
     m_lineIgnoreKeywords->setText(settings.value("history/ignoredFolderNames", "").toString());
     m_lineCommandEnvScript->setText(settings.value("commandLine/envScriptPath", "").toString());
     m_checkStartup->setChecked(settings.value("startup/enabled", isStartupEnabled()).toBool());
+    setCompactMode(settings.value("window/compactMode", false).toBool());
 }
 
 void MainWindow::saveSettings() const
@@ -406,6 +422,7 @@ void MainWindow::saveSettings() const
     settings.setValue("history/ignoredFolderNames", m_lineIgnoreKeywords->text().trimmed());
     settings.setValue("commandLine/envScriptPath", m_lineCommandEnvScript->text().trimmed());
     settings.setValue("startup/enabled", m_checkStartup->isChecked());
+    settings.setValue("window/compactMode", m_compactMode);
 }
 
 void MainWindow::applyStartupSetting(bool enabled) const
@@ -493,6 +510,27 @@ void MainWindow::setupShortcuts()
     auto *focusSearchShortcut = new QShortcut(QKeySequence("Ctrl+L"), this);
     focusSearchShortcut->setContext(Qt::WindowShortcut);
     connect(focusSearchShortcut, &QShortcut::activated, this, &MainWindow::showAndFocusSearch);
+}
+
+void MainWindow::setCompactMode(bool compact)
+{
+    m_compactMode = compact;
+    applyViewMode();
+}
+
+void MainWindow::applyViewMode()
+{
+    m_quickAccessWidget->setVisible(!m_compactMode);
+    m_tabWidget->tabBar()->setVisible(!m_compactMode);
+    m_tabWidget->setCurrentIndex(0);
+    m_btnViewMode->setText(m_compactMode ? qs(L"\u5168\u91cf\u6a21\u5f0f") : qs(L"\u7cbe\u7b80\u6a21\u5f0f"));
+
+    if (m_compactMode) {
+        setMinimumSize(560, 360);
+        resize(qMin(width(), 720), qMin(height(), 520));
+    } else {
+        setMinimumSize(760, 560);
+    }
 }
 
 void MainWindow::updateList()
