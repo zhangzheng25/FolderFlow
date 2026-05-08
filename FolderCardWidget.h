@@ -11,13 +11,41 @@
 #include <QMenu>
 #include <QClipboard>
 #include <QApplication>
+#include <QCoreApplication>
 #include <QInputDialog>
 #include <QLineEdit>
 #include <QFileInfo>
+#include <QDir>
 #include <QMouseEvent>
-#include <QProcess>
+#include <QSettings>
+#include <QStandardPaths>
 #include <QStringList>
+#include <Windows.h>
+#include <shellapi.h>
 #include "DatabaseManager.h"
+
+namespace {
+QString appSettingsPath()
+{
+    QString dirPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    if (dirPath.isEmpty()) {
+        dirPath = QCoreApplication::applicationDirPath();
+    }
+
+    return QDir(dirPath).filePath("settings.ini");
+}
+
+QString commandLineEnvScriptPath()
+{
+    QSettings settings(appSettingsPath(), QSettings::IniFormat);
+    return settings.value("commandLine/envScriptPath", "").toString().trimmed();
+}
+
+QString quotedCmdArg(const QString& value)
+{
+    return QString("\"%1\"").arg(QDir::toNativeSeparators(value));
+}
+}
 
 class FolderCardWidget : public QWidget {
     Q_OBJECT
@@ -81,7 +109,21 @@ protected:
 
         auto *res = menu.exec(event->globalPos());
         if (res == openCmdAct) {
-            QProcess::startDetached("cmd.exe", QStringList() << "/K", m_item.path);
+            const QString workingDir = QDir::toNativeSeparators(m_item.path);
+            const QString envScriptPath = commandLineEnvScriptPath();
+            QString parameters = QStringLiteral("/K");
+            if (QFileInfo(envScriptPath).isFile()) {
+                const QString command = QString("%1 && cd /d %2")
+                        .arg(quotedCmdArg(envScriptPath), quotedCmdArg(workingDir));
+                parameters = QString("/K \"%1\"").arg(command);
+            }
+
+            ShellExecuteW(nullptr,
+                          L"open",
+                          L"cmd.exe",
+                          reinterpret_cast<LPCWSTR>(parameters.utf16()),
+                          reinterpret_cast<LPCWSTR>(workingDir.utf16()),
+                          SW_SHOWNORMAL);
         } else if (res == copyAct) {
             QApplication::clipboard()->setText(m_item.path);
         } else if (pinAct && res == pinAct) {

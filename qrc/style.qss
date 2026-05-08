@@ -80,6 +80,11 @@ QLabel#shortcut_help {
     line-height: 1.35;
 }
 
+QLabel#label_formula {
+    color: #596779;
+    font-size: 13px;
+}
+
 QLineEdit {
     min-height: 30px;
     padding: 2px 10px;

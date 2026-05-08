@@ -1,4 +1,4 @@
-#include "mainwindow.h"
+﻿#include "mainwindow.h"
 
 #include "FolderListWidget.h"
 
@@ -6,11 +6,14 @@
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
+#include <QFileDialog>
+#include <QFormLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QMessageBox>
 #include <QScreen>
 #include <QShortcut>
+#include <QSizePolicy>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QVBoxLayout>
@@ -133,17 +136,27 @@ void MainWindow::setupUi()
     m_tabWidget->addTab(recentTab, qs(L"\u6700\u8fd1"));
 
     auto *manageTab = new QWidget(m_tabWidget);
-    auto *manageLayout = new QHBoxLayout(manageTab);
+    auto *manageLayout = new QVBoxLayout(manageTab);
     manageLayout->setContentsMargins(0, 8, 0, 0);
     manageLayout->setSpacing(8);
 
     auto *settingsBox = new QGroupBox(qs(L"\u5c5e\u6027\u914d\u7f6e"), manageTab);
-    settingsBox->setMinimumWidth(280);
+    settingsBox->setMinimumWidth(560);
+    settingsBox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);
     auto *settingsLayout = new QVBoxLayout(settingsBox);
-    settingsLayout->setContentsMargins(8, 6, 8, 8);
-    settingsLayout->setSpacing(8);
+    settingsLayout->setContentsMargins(12, 28, 12, 12);
+    settingsLayout->setSpacing(10);
+
+    auto *settingsForm = new QFormLayout;
+    settingsForm->setContentsMargins(0, 0, 0, 0);
+    settingsForm->setSpacing(10);
+    settingsForm->setLabelAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    settingsForm->setFormAlignment(Qt::AlignTop);
+    settingsForm->setFieldGrowthPolicy(QFormLayout::ExpandingFieldsGrow);
 
     auto *weightLabelLayout = new QHBoxLayout;
+    weightLabelLayout->setContentsMargins(0, 0, 0, 0);
+    weightLabelLayout->setSpacing(8);
     m_labelCount = new QLabel(qs(L"\u8ba1\u6570:50%"), settingsBox);
     m_labelLatest = new QLabel(qs(L"\u65b0\u9c9c\u5ea6:50%"), settingsBox);
     weightLabelLayout->addWidget(m_labelCount);
@@ -156,7 +169,23 @@ void MainWindow::setupUi()
     m_sliderWeight->setValue(50);
     m_sliderWeight->setTickPosition(QSlider::TicksAbove);
 
-    auto *limitLabel = new QLabel(qs(L"\u67e5\u8be2\u9650\u5236"), settingsBox);
+    auto *weightWidget = new QWidget(settingsBox);
+    auto *weightLayout = new QVBoxLayout(weightWidget);
+    weightLayout->setContentsMargins(0, 0, 0, 0);
+    weightLayout->setSpacing(4);
+    weightLayout->addLayout(weightLabelLayout);
+    weightLayout->addWidget(m_sliderWeight);
+
+    m_labelFormula = new QLabel(settingsBox);
+    m_labelFormula->setObjectName("label_formula");
+    m_labelFormula->setWordWrap(false);
+    m_labelFormula->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    auto *formulaWidget = new QWidget(settingsBox);
+    auto *formulaLayout = new QHBoxLayout(formulaWidget);
+    formulaLayout->setContentsMargins(0, 0, 0, 0);
+    formulaLayout->addWidget(m_labelFormula, 1);
+
     m_spinQueryCount = new QSpinBox(settingsBox);
     m_spinQueryCount->setObjectName("spin_query_count");
     m_spinQueryCount->setRange(10, 200);
@@ -169,55 +198,90 @@ void MainWindow::setupUi()
     m_spinQueryTime->setValue(7);
     m_spinQueryTime->setSuffix(" day");
 
-    auto *keepDaysLabel = new QLabel(qs(L"\u5386\u53f2\u4fdd\u7559\u5929\u6570"), settingsBox);
     m_spinKeepDays = new QSpinBox(settingsBox);
     m_spinKeepDays->setObjectName("spin_keep_days");
     m_spinKeepDays->setRange(1, 365);
     m_spinKeepDays->setValue(7);
     m_spinKeepDays->setSuffix(" day");
 
-    auto *ignoreLabel = new QLabel(qs(L"\u5ffd\u7565\u76ee\u5f55\u540d"), settingsBox);
+    auto *queryWidget = new QWidget(settingsBox);
+    auto *queryLayout = new QHBoxLayout(queryWidget);
+    queryLayout->setContentsMargins(0, 0, 0, 0);
+    queryLayout->setSpacing(8);
+    auto *queryCountLabel = new QLabel(qs(L"\u6761\u6570"), settingsBox);
+    auto *queryTimeLabel = new QLabel(qs(L"\u5929\u6570"), settingsBox);
+    auto *keepDaysInlineLabel = new QLabel(qs(L"\u4fdd\u7559"), settingsBox);
+    queryLayout->addWidget(queryCountLabel);
+    queryLayout->addWidget(m_spinQueryCount);
+    queryLayout->addWidget(queryTimeLabel);
+    queryLayout->addWidget(m_spinQueryTime);
+    queryLayout->addSpacing(12);
+    queryLayout->addWidget(keepDaysInlineLabel);
+    queryLayout->addWidget(m_spinKeepDays);
+    queryLayout->addStretch();
+
     m_lineIgnoreKeywords = new QLineEdit(settingsBox);
     m_lineIgnoreKeywords->setObjectName("line_ignore_keywords");
     m_lineIgnoreKeywords->setPlaceholderText(qs(L"\u4f8b\u5982: build; debug; release"));
+
+    auto *commandEnvWidget = new QWidget(settingsBox);
+    auto *commandEnvLayout = new QHBoxLayout;
+    commandEnvWidget->setLayout(commandEnvLayout);
+    commandEnvLayout->setContentsMargins(0, 0, 0, 0);
+    commandEnvLayout->setSpacing(6);
+    m_lineCommandEnvScript = new QLineEdit(settingsBox);
+    m_lineCommandEnvScript->setObjectName("line_command_env_script");
+    m_lineCommandEnvScript->setPlaceholderText(qs(L"\u9009\u62e9 .bat/.cmd\uff0c\u4f8b\u5982 qtenv2.bat \u6216 VsDevCmd.bat"));
+    m_btnBrowseCommandEnvScript = new QPushButton(qs(L"\u6d4f\u89c8"), settingsBox);
+    m_btnBrowseCommandEnvScript->setObjectName("btn_browse_command_env_script");
+    m_btnClearCommandEnvScript = new QPushButton(qs(L"\u6e05\u7a7a"), settingsBox);
+    m_btnClearCommandEnvScript->setObjectName("btn_clear_command_env_script");
+    commandEnvLayout->addWidget(m_lineCommandEnvScript, 1);
+    commandEnvLayout->addWidget(m_btnBrowseCommandEnvScript);
+    commandEnvLayout->addWidget(m_btnClearCommandEnvScript);
 
     m_checkStartup = new QCheckBox(qs(L"\u5f00\u673a\u542f\u52a8"), settingsBox);
     m_checkStartup->setObjectName("check_startup");
 
     m_btnClearHistory = new QPushButton(qs(L"\u6e05\u7a7a\u5386\u53f2"), settingsBox);
     m_btnClearHistory->setObjectName("btn_clear_history");
+    m_btnClearHistory->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
-    auto *shortcutTitle = new QLabel(qs(L"\u5feb\u6377\u952e"), settingsBox);
-    shortcutTitle->setObjectName("shortcut_title");
-    auto *shortcutHelp = new QLabel(settingsBox);
+    auto *actionsWidget = new QWidget(settingsBox);
+    auto *actionsLayout = new QHBoxLayout(actionsWidget);
+    actionsLayout->setContentsMargins(0, 0, 0, 0);
+    actionsLayout->setSpacing(12);
+    actionsLayout->addWidget(m_checkStartup);
+    actionsLayout->addWidget(m_btnClearHistory);
+    actionsLayout->addStretch();
+
+    auto *shortcutBox = new QGroupBox(qs(L"\u5feb\u6377\u952e"), manageTab);
+    shortcutBox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    auto *shortcutLayout = new QVBoxLayout(shortcutBox);
+    shortcutLayout->setContentsMargins(12, 10, 12, 12);
+    shortcutLayout->setSpacing(6);
+    auto *shortcutHelp = new QLabel(shortcutBox);
     shortcutHelp->setObjectName("shortcut_help");
-    shortcutHelp->setText(qs(L"Ctrl + Space  \u663e\u793a/\u9690\u85cf\n"
-                             L"Ctrl + L      \u805a\u7126\u641c\u7d22\n"
-                             L"Alt + 1..6    \u6253\u5f00\u65f6\u95f4\u7ebf\u524d 6 \u9879\n"
-                             L"Enter         \u6267\u884c\u641c\u7d22\n"
-                             L"Esc           \u6e05\u7a7a\u641c\u7d22/\u9690\u85cf"));
+    shortcutHelp->setText(qs(L"Ctrl + Space\t\t\u663e\u793a/\u9690\u85cf\n"
+                             L"Ctrl + L\t\t\t\u805a\u7126\u641c\u7d22\n"
+                             L"Alt + 1..6\t\t\t\u6253\u5f00\u65f6\u95f4\u7ebf\u524d 6 \u9879\n"
+                             L"Enter\t\t\t\u6267\u884c\u641c\u7d22\n"
+                             L"Esc\t\t\t\u6e05\u7a7a\u641c\u7d22/\u9690\u85cf"));
     shortcutHelp->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    shortcutLayout->addWidget(shortcutHelp);
 
-    settingsLayout->addLayout(weightLabelLayout);
-    settingsLayout->addWidget(m_sliderWeight);
-    settingsLayout->addSpacing(4);
-    settingsLayout->addWidget(limitLabel);
-    settingsLayout->addWidget(m_spinQueryCount);
-    settingsLayout->addWidget(m_spinQueryTime);
-    settingsLayout->addSpacing(4);
-    settingsLayout->addWidget(keepDaysLabel);
-    settingsLayout->addWidget(m_spinKeepDays);
-    settingsLayout->addSpacing(4);
-    settingsLayout->addWidget(ignoreLabel);
-    settingsLayout->addWidget(m_lineIgnoreKeywords);
-    settingsLayout->addWidget(m_checkStartup);
-    settingsLayout->addWidget(m_btnClearHistory);
-    settingsLayout->addSpacing(6);
-    settingsLayout->addWidget(shortcutTitle);
-    settingsLayout->addWidget(shortcutHelp);
+    settingsForm->addRow(qs(L"\u6392\u5e8f\u6743\u91cd"), weightWidget);
+    settingsForm->addRow(qs(L"\u8ba1\u7b97\u516c\u5f0f"), formulaWidget);
+    settingsForm->addRow(qs(L"\u67e5\u8be2 / \u5386\u53f2"), queryWidget);
+    settingsForm->addRow(qs(L"\u5ffd\u7565\u76ee\u5f55"), m_lineIgnoreKeywords);
+    settingsForm->addRow(qs(L"\u547d\u4ee4\u884c\u73af\u5883"), commandEnvWidget);
+    settingsForm->addRow(qs(L"\u5e38\u7528\u64cd\u4f5c"), actionsWidget);
+    settingsLayout->addLayout(settingsForm);
     settingsLayout->addStretch();
 
-    manageLayout->addWidget(settingsBox);
+    manageLayout->addWidget(settingsBox, 0);
+    manageLayout->addStretch(1);
+    manageLayout->addWidget(shortcutBox, 0);
     m_tabWidget->addTab(manageTab, qs(L"\u8bbe\u7f6e"));
 
     mainLayout->addWidget(m_tabWidget, 1);
@@ -278,6 +342,29 @@ void MainWindow::initConnect()
         updateList();
     });
 
+    connect(m_lineCommandEnvScript, &QLineEdit::editingFinished, this, [this]() {
+        saveSettings();
+    });
+
+    connect(m_btnBrowseCommandEnvScript, &QPushButton::clicked, this, [this]() {
+        const QString selectedPath = QFileDialog::getOpenFileName(
+                this,
+                qs(L"\u9009\u62e9\u547d\u4ee4\u884c\u73af\u5883\u811a\u672c"),
+                m_lineCommandEnvScript->text().trimmed(),
+                qs(L"\u547d\u4ee4\u811a\u672c (*.bat *.cmd);;\u6240\u6709\u6587\u4ef6 (*.*)"));
+        if (selectedPath.isEmpty()) {
+            return;
+        }
+
+        m_lineCommandEnvScript->setText(QDir::toNativeSeparators(selectedPath));
+        saveSettings();
+    });
+
+    connect(m_btnClearCommandEnvScript, &QPushButton::clicked, this, [this]() {
+        m_lineCommandEnvScript->clear();
+        saveSettings();
+    });
+
     connect(m_checkStartup, &QCheckBox::toggled, this, [this](bool enabled) {
         applyStartupSetting(enabled);
         saveSettings();
@@ -305,6 +392,7 @@ void MainWindow::loadSettings()
     m_spinQueryTime->setValue(settings.value("query/days", 7).toInt());
     m_spinKeepDays->setValue(settings.value("history/keepDays", 7).toInt());
     m_lineIgnoreKeywords->setText(settings.value("history/ignoredFolderNames", "").toString());
+    m_lineCommandEnvScript->setText(settings.value("commandLine/envScriptPath", "").toString());
     m_checkStartup->setChecked(settings.value("startup/enabled", isStartupEnabled()).toBool());
 }
 
@@ -316,6 +404,7 @@ void MainWindow::saveSettings() const
     settings.setValue("query/days", m_spinQueryTime->value());
     settings.setValue("history/keepDays", m_spinKeepDays->value());
     settings.setValue("history/ignoredFolderNames", m_lineIgnoreKeywords->text().trimmed());
+    settings.setValue("commandLine/envScriptPath", m_lineCommandEnvScript->text().trimmed());
     settings.setValue("startup/enabled", m_checkStartup->isChecked());
 }
 
@@ -421,6 +510,9 @@ void MainWindow::updateList()
 
     m_labelCount->setText(qs(L"\u8ba1\u6570:%1%").arg(countWeight));
     m_labelLatest->setText(qs(L"\u65b0\u9c9c\u5ea6:%1%").arg(100 - countWeight));
+    m_labelFormula->setText(qs(L"\u516c\u5f0f: \u70ed\u5ea6 = \u6b21\u6570 \u00d7 %1% + \u65b0\u9c9c\u5ea6 \u00d7 %2%")
+                                    .arg(countWeight)
+                                    .arg(timeWeight));
 }
 
 QString MainWindow::currentSearchKeyword() const

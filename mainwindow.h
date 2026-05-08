@@ -59,6 +59,7 @@ private:
     FolderListWidget *m_listTimeline = nullptr;
     FolderListWidget *m_listRanking = nullptr;
     FolderListWidget *m_listFavorite = nullptr;
+    QLabel *m_labelFormula = nullptr;
     QLabel *m_labelCount = nullptr;
     QLabel *m_labelLatest = nullptr;
     QSlider *m_sliderWeight = nullptr;
@@ -66,6 +67,9 @@ private:
     QSpinBox *m_spinQueryTime = nullptr;
     QSpinBox *m_spinKeepDays = nullptr;
     QLineEdit *m_lineIgnoreKeywords = nullptr;
+    QLineEdit *m_lineCommandEnvScript = nullptr;
+    QPushButton *m_btnBrowseCommandEnvScript = nullptr;
+    QPushButton *m_btnClearCommandEnvScript = nullptr;
     QCheckBox *m_checkStartup = nullptr;
     QPushButton *m_btnClearHistory = nullptr;
 

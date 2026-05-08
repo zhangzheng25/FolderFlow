@@ -14,6 +14,15 @@
 
 namespace {
 QStringList g_ignoredKeywords;
+
+bool isDriveRootPath(const QString& path)
+{
+    const QString cleaned = QDir::cleanPath(QDir::fromNativeSeparators(path.trimmed()));
+    return (cleaned.length() == 2 || cleaned.length() == 3)
+            && cleaned.at(0).isLetter()
+            && cleaned.at(1) == QLatin1Char(':')
+            && (cleaned.length() == 2 || cleaned.at(2) == QLatin1Char('/'));
+}
 }
 
 bool DatabaseManager::init(int keepDays)
@@ -116,6 +125,10 @@ void DatabaseManager::logAccess(const QString& path)
 
 void DatabaseManager::setFavorite(const QString& path, bool fav, const QString& alias)
 {
+    if (fav && isDriveRootPath(path)) {
+        return;
+    }
+
     QSqlQuery query;
     if (fav) {
         query.prepare("INSERT INTO folder_data (path, is_favorite, alias_name) VALUES (?, 1, ?) "
@@ -138,6 +151,10 @@ void DatabaseManager::setFavorite(const QString& path, bool fav, const QString& 
 
 void DatabaseManager::setPinned(const QString& path, bool pinned)
 {
+    if (pinned && isDriveRootPath(path)) {
+        return;
+    }
+
     QSqlQuery query;
     if (pinned) {
         query.prepare("INSERT INTO folder_data (path, is_pinned, last_time, access_count) "
@@ -272,6 +289,10 @@ void DatabaseManager::bindKeyword(QSqlQuery& query, const QString& keyword)
 
 bool DatabaseManager::isIgnored(const QString& path, const QString& alias)
 {
+    if (isDriveRootPath(path)) {
+        return true;
+    }
+
     if (g_ignoredKeywords.isEmpty()) {
         return false;
     }
